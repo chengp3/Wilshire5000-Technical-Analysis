@@ -4,7 +4,7 @@ import configparser
 from write import resource_path
 
 
-def get_settings():
+def get_settings(): #settings in config.cfg
     parser = configparser.ConfigParser()
     parser.read(resource_path("config.cfg"))
 
@@ -24,6 +24,8 @@ def get_year_from_today():
 def get_data_for_year(symbol):
     today, year_ago = get_year_from_today()
     year = yf.download(symbol, start=year_ago, end=today)
+    #year is a pandas df with daily bar info with open, close, high, low, adjusted close, volume
+    #adj close is close adjusted for dividends, splits etc
 
     return year
 
@@ -57,14 +59,14 @@ def get_indicators(symbol):
 
     SDVAperiod = get_settings()
 
-    SMA50 = data[-50:].mean()
-    SMA200 = data[-200:].mean()
-    cross = recent_cross(data, SMA50, SMA200)
+    SMA50 = data[-50:].mean() #50 period moving average
+    SMA200 = data[-200:].mean() #200 period
+    cross = recent_cross(data, SMA50, SMA200) #looking for golden/death cross
 
-    percentd = (cur_price - SMA50) / SMA50 * 100
+    percentd = (cur_price - SMA50) / SMA50 * 100 #yesterday's change
     RSI = compute_RSI(year["Adj Close"], 14)
-    SDVA = year["Volume"].tail(SDVAperiod).mean()
-    SDVAd = (year["Volume"].iloc[-1] - SDVA) / SDVA * 100
+    SDVA = year["Volume"].tail(SDVAperiod).mean() #simple daily volume average
+    SDVAd = (year["Volume"].iloc[-1] - SDVA) / SDVA * 100 #volume change
 
     return cur_price, SMA50, percentd, SMA200, cross, RSI, SDVA, SDVAd
 
