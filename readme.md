@@ -1,4 +1,5 @@
-Notes:
+# Notes:
+
 Google Finance API was discontinued
 
 This module uses Yahoo Finance API
@@ -10,7 +11,7 @@ Add new indicators in calc
 
 Settings for indicators in config.cfg
 
-Requirements:
+# Requirements:
 
 gspread
 google.oauth2
