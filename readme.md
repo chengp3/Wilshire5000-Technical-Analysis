@@ -7,6 +7,7 @@ You'll need your own Google Cloud API service account credentials in
 'keys.json' in the project root folder to post things to Google Sheets. 
 
 Add new indicators in calc
+
 Settings for indicators in config.cfg
 
 Requirements:
