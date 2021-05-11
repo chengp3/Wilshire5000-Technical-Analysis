@@ -2,7 +2,7 @@
 
 This module uses Yahoo Finance API for financial data.
 
-You'll need your own Google Cloud API service account credentials in 
+You'll need a Google Cloud API service account credentials in 
 'keys.json' in the project root folder to post things to Google Sheets. 
 
 Add new indicators in calc.
