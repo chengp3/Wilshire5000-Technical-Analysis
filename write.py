@@ -4,7 +4,16 @@ import gspread
 from google.oauth2 import service_account
 import sys
 import os
+import configparser
 
+
+def get_settings(): #settings in config.cfg
+    parser = configparser.ConfigParser()
+    parser.read(resource_path("config.cfg"))
+
+    workbook = parser.get("config", "workbookname")
+
+    return workbook
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -18,6 +27,7 @@ def resource_path(relative_path):
 
 
 def write_to_sheet(df, index):
+    workbook = get_settings()[1:-1]
 
     SCOPES = ['https://www.googleapis.com/auth/drive']
 
@@ -27,11 +37,10 @@ def write_to_sheet(df, index):
 
     client = gspread.authorize(creds)
 
-    sheet = client.open("Stock Indicator Worksheet").sheet1
+    sheet = client.open(workbook).sheet1
 
     df.fillna('-1', inplace=True)
-    aoa = df.values.tolist()
+    aoa = df.values.tolist() #array of arrays
 
     # Call the Sheets API
-
-    sheet.update(f'A{index}', aoa)
+    sheet.update(f'A{index}', aoa) #send it

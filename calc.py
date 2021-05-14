@@ -52,45 +52,78 @@ def compute_RSI(df, time_window):
     return rsi.iloc[-1]
 
 
-def get_indicators(symbol):
-    year = get_data_for_year(symbol)
-    cur_price = year['Adj Close'][-1]
-    data = year["Close"]
+def get_100_companies(symbols):
+    today, year_ago = get_year_from_today()
+    year_data_all = yf.download(symbols, start=year_ago, end=today) #100 companies year data
 
-    SDVAperiod = get_settings()
-
-    SMA50 = data[-50:].mean() #50 period moving average
-    SMA200 = data[-200:].mean() #200 period
-    cross = recent_cross(data, SMA50, SMA200) #looking for golden/death cross
-
-    percentd = (cur_price - SMA50) / SMA50 * 100 #yesterday's change
-    RSI = compute_RSI(year["Adj Close"], 14)
-    SDVA = year["Volume"].tail(SDVAperiod).mean() #simple daily volume average
-    SDVAd = (year["Volume"].iloc[-1] - SDVA) / SDVA * 100 #volume change
-
-    return cur_price, SMA50, percentd, SMA200, cross, RSI, SDVA, SDVAd
+    return year_data_all
 
 
-def sf(number, significant):
-    return round(number, significant - len(str(number)))
+def SMA(closes,period):
+    return closes[-period:].mean()
 
 
-def recent_cross(data, SMA50, SMA200):
-    daybeforeyestSMA50 = data[-51:-1].mean()
-    daybeforeyestSMA200 = data[-201:-1].mean()
-
-    if (daybeforeyestSMA50 > daybeforeyestSMA200) and (SMA50 > SMA200):
+def cross(beforeSMA50, beforeSMA200, SMA50, SMA200):
+    if (beforeSMA50 > beforeSMA200) and (SMA50 > SMA200):
         return "None"
-    elif (daybeforeyestSMA50 < daybeforeyestSMA200) and (SMA50 < SMA200):
+    elif (beforeSMA50 < beforeSMA200) and (SMA50 < SMA200):
         return "None"
-    elif (daybeforeyestSMA50 < daybeforeyestSMA200) and (SMA50 > SMA200):
+    elif (beforeSMA50 < beforeSMA200) and (SMA50 > SMA200):
         return "Golden Cross"
-    elif (daybeforeyestSMA50 > daybeforeyestSMA200) and (SMA50 < SMA200):
+    elif (beforeSMA50 > beforeSMA200) and (SMA50 < SMA200):
         return "Death Cross"
     return "None"
 
+#period is trading days, not actual days
+def recent_cross(closes,period=30):
+    #for every day in last month, calculate 4 SMAs, run it through cross()
+        #start with yesterday, if cross, return cross type, else increment
+    i = 0
+    while i < period:
+        beforeSMA50 = SMA(closes[:-i-1],50)
+        beforeSMA200 = SMA(closes[:-i-1],200)
+        if i == 0:
+            SMA50 = SMA(closes,50)
+            SMA200 = SMA(closes,200)    
+        else: 
+            SMA50 = SMA(closes[:-i],50)
+            SMA200 = SMA(closes[:-i],200)
+        crosstype = cross(beforeSMA50, beforeSMA200, SMA50, SMA200)
+        if crosstype == "None":
+            i += 1
+        elif crosstype != "None":
+            return f'{crosstype} at {str(closes.index[-i])}'
+    return "None"
 
-def add_columns(df):
+def analyze(adj_closes, closes, vols):
+    try:
+        closes = closes.dropna()
+        adj_closes = adj_closes.dropna()
+        vols = vols.dropna()
+        cur_price = closes[-1]
+        
+        SDVAperiod = 14
+        #SDVAperiod = get_settings()
+
+        SMA50 = SMA(closes,50) #50 period moving average
+        SMA200 = SMA(closes,200) #200 period
+        cross = recent_cross(closes,period =30) #looking for golden/death cross
+
+        percentd = (cur_price - SMA50) / SMA50 #yesterday's change
+        RSI = compute_RSI(adj_closes, 14)
+        SDVA = vols.tail(SDVAperiod).mean() #simple daily volume average
+        SDVAd = (vols.iloc[-1] - SDVA) / SDVA #volume change
+
+        return cur_price, SMA50, percentd, SMA200, cross, RSI, SDVA, SDVAd
+    except IndexError:
+        return -1, -1, -1, -1, -1, -1, -1, -1
+
+
+def add_indicators(df):
+
+    symbols = list(df.Symbol)
+    year_data_all = get_100_companies(symbols)
+    
     pricearr = []
     SMA50arr = []
     SMA200arr = []
@@ -99,32 +132,22 @@ def add_columns(df):
     RSIarr = []
     SDVAarr = []
     SDVAdarr = []
-
-    for index, row in df.iterrows():
-        try:
-            symbol = row.Symbol
-
-            cur_price, SMA50, percentd, SMA200, cross, RSI, SDVA, SDVAd = get_indicators(symbol)
-            pricearr.append(cur_price)
-            SMA50arr.append(round(SMA50, 2))
-            percentdarr.append(str(round(percentd, 2))+'%')
-            SMA200arr.append(round(SMA200, 2))
-            crossarr.append(cross)
-            RSIarr.append(round(RSI, 2))
-            SDVAarr.append(SDVA)
-            SDVAdarr.append(str(round(SDVAd, 2))+'%')
-
-        except IndexError:
-            print(f'Error with: {symbol}, might have been delisted')
-            pricearr.append(-1)
-            SMA50arr.append(-1)
-            percentdarr.append(str(-1))
-            SMA200arr.append(-1)
-            crossarr.append('-1')
-            RSIarr.append(-1)
-            SDVAarr.append(-1)
-            SDVAdarr.append(str(-1))
-            continue
+    
+    for symbol in symbols:
+        adj_closes = year_data_all["Adj Close"][symbol]
+        closes = year_data_all["Close"][symbol]
+        vols = year_data_all["Volume"][symbol]
+        
+        cur_price, SMA50, percentd, SMA200, cross, RSI, SDVA, SDVAd = analyze(adj_closes, closes, vols)
+        
+        pricearr.append(cur_price)
+        SMA50arr.append(round(SMA50, 2))
+        percentdarr.append(percentd)
+        SMA200arr.append(round(SMA200, 2))
+        crossarr.append(cross)
+        RSIarr.append(round(RSI, 2))
+        SDVAarr.append(SDVA)
+        SDVAdarr.append(SDVAd)
 
     df['Current Price'] = pricearr
     df['SMA50'] = SMA50arr

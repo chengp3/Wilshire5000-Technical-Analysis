@@ -1,4 +1,7 @@
 dist/
 build/
+Include/
+Lib/
+Scripts/
 __pycache__/
 *.spec

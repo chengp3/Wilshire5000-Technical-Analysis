@@ -7,7 +7,9 @@ You'll need a Google Cloud API service account credentials in
 
 Add new indicators in calc.
 
-Settings for indicators in config.cfg.
+Also need to change the 
+
+Workbook name in config.cfg. Will always write to sheet "sheet1"
 
 # Requirements:
 

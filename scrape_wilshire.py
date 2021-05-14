@@ -10,8 +10,6 @@ def getPage(url):
     return BeautifulSoup(page.text, 'lxml')
 
 # get all page links
-
-
 def get_all_links(first_url):
     links = []
 
@@ -65,13 +63,13 @@ def digest_table(table):
     return df
 
 
-def digest_site(url):
+#single page scrape given url
+def digest_page(url):
     soup = getPage(url)
 
     # locate the data table
     table = soup.body.find('td', text=re.compile(r'\d+\.')).parent.parent.findAll('tr')
-    site_df = digest_table(table)  # get the basic info (rank, company, market cap)
+    page_df = digest_table(table)  # get the basic info (rank, company, market cap)
+    calc.add_indicators(page_df) # add technical analysis
 
-    site_df = calc.add_columns(site_df)  # add indicator columns
-
-    return site_df
+    return page_df
